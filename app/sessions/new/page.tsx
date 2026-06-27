@@ -3,13 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {
-  ChevronLeft,
-  ChevronRight,
-  RefreshCw,
-  Shuffle,
-  Zap,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, RefreshCw, Search, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,10 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { getPlayers, createSession, bulkInsertMatches } from "@/lib/supabase";
-import {
-  generateSchedule,
-  createBalancedPairs,
-} from "@/lib/matchmaking";
+import { generateSchedule, createBalancedPairs } from "@/lib/matchmaking";
 import type { Player } from "@/lib/types";
 
 type Step = "players" | "config" | "pairs";
@@ -29,18 +20,16 @@ type Step = "players" | "config" | "pairs";
 export default function NewSessionPage() {
   const router = useRouter();
 
-  // ── Data ────────────────────────────────────────────────────────────────────
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [loadingPlayers, setLoadingPlayers] = useState(true);
+  const [search, setSearch] = useState("");
 
-  // ── Session config ───────────────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [numCourts, setNumCourts] = useState(2);
   const [numGames, setNumGames] = useState(6);
   const [fixedPartnerships, setFixedPartnerships] = useState(false);
   const [pairs, setPairs] = useState<[string, string][]>([]);
 
-  // ── UI ──────────────────────────────────────────────────────────────────
   const [step, setStep] = useState<Step>("players");
   const [generating, setGenerating] = useState(false);
 
@@ -51,8 +40,10 @@ export default function NewSessionPage() {
       .finally(() => setLoadingPlayers(false));
   }, []);
 
-  // ── Derived ─────────────────────────────────────────────────────────────
   const selectedPlayers = allPlayers.filter((p) => selectedIds.has(p.id));
+  const filteredPlayers = allPlayers.filter((p) =>
+    p.name.toLowerCase().includes(search.toLowerCase())
+  );
   const playersNeeded = numCourts * 4;
   const canPlay = selectedPlayers.length >= 4;
 
@@ -72,7 +63,6 @@ export default function NewSessionPage() {
     setSelectedIds(new Set());
   }
 
-  // ── Navigation ────────────────────────────────────────────────────────────
   function goToConfig() {
     if (selectedPlayers.length < 4) {
       toast.error("Select at least 4 players.");
@@ -90,18 +80,12 @@ export default function NewSessionPage() {
     setPairs(createBalancedPairs(selectedPlayers.map((p) => p.id)));
   }
 
-  function swapPairMember(
-    pairIdx: number,
-    slot: 0 | 1,
-    newPlayerId: string
-  ) {
+  function swapPairMember(pairIdx: number, slot: 0 | 1, newPlayerId: string) {
     setPairs((prev) => {
       const next = prev.map((p) => [...p] as [string, string]);
-      // Find where newPlayerId currently sits
       for (let i = 0; i < next.length; i++) {
         for (let s = 0; s < 2; s++) {
           if (next[i][s] === newPlayerId) {
-            // Swap with target
             const temp = next[pairIdx][slot];
             next[pairIdx][slot] = newPlayerId;
             next[i][s as 0 | 1] = temp;
@@ -113,11 +97,9 @@ export default function NewSessionPage() {
     });
   }
 
-  // ── Generate ──────────────────────────────────────────────────────────────
   async function handleGenerate() {
     if (!canPlay) return;
     setGenerating(true);
-
     try {
       const playerIds = selectedPlayers.map((p) => p.id);
       const schedule = generateSchedule(
@@ -128,7 +110,6 @@ export default function NewSessionPage() {
         fixedPartnerships ? pairs : undefined
       );
 
-      // Persist session
       const session = await createSession({
         total_courts: numCourts,
         total_games: numGames,
@@ -137,7 +118,6 @@ export default function NewSessionPage() {
         pairs: fixedPartnerships ? (schedule.pairs ?? null) : null,
       });
 
-      // Persist matches
       const matchRows = schedule.games.flatMap((game) =>
         game.courts.map((court) => ({
           session_id: session.id,
@@ -160,25 +140,20 @@ export default function NewSessionPage() {
     }
   }
 
-  // ── Name helper ───────────────────────────────────────────────────────────
   function playerName(id: string) {
     return allPlayers.find((p) => p.id === id)?.name ?? id.slice(0, 6);
   }
 
-  // ── Step indicators ───────────────────────────────────────────────────────
   const steps: { key: Step; label: string }[] = [
     { key: "players", label: "Players" },
     { key: "config", label: "Configure" },
     ...(fixedPartnerships ? [{ key: "pairs" as Step, label: "Pairs" }] : []),
   ];
-
   const stepIndex = steps.findIndex((s) => s.key === step);
-
-  // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-1">New Session</h1>
+      <h1 className="text-2xl font-bold text-white mb-1">New Session</h1>
       <p className="text-muted-foreground text-sm mb-6">
         Select players, configure courts, and generate your schedule.
       </p>
@@ -188,45 +163,39 @@ export default function NewSessionPage() {
         {steps.map(({ key, label }, i) => (
           <div key={key} className="flex items-center gap-2">
             <div
-              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
                 step === key
-                  ? "bg-green-700 text-white"
+                  ? "bg-primary text-primary-foreground"
                   : i < stepIndex
-                  ? "bg-green-200 text-green-800"
-                  : "bg-muted text-muted-foreground"
+                  ? "bg-primary/20 text-primary"
+                  : "bg-zinc-800 text-zinc-500"
               }`}
             >
               {i + 1}
             </div>
             <span
               className={`text-sm font-medium ${
-                step === key ? "text-green-800" : "text-muted-foreground"
+                step === key ? "text-white" : "text-muted-foreground"
               }`}
             >
               {label}
             </span>
             {i < steps.length - 1 && (
-              <div className="w-8 h-px bg-border mx-1" />
+              <div className="w-8 h-px bg-zinc-800 mx-1" />
             )}
           </div>
         ))}
       </div>
 
-      {/* ── STEP 1: Player Selection ────────────────────────────────────────── */}
+      {/* ── STEP 1: Player Selection ─────────────────────────────────────────── */}
       {step === "players" && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Badge variant={canPlay ? "default" : "secondary"}>
-                {selectedPlayers.length} selected
-              </Badge>
-              {selectedPlayers.length > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  {numCourts * 4} needed for {numCourts} courts
-                </span>
-              )}
-            </div>
-            <div className="flex gap-2">
+          {/* Toolbar */}
+          <div className="flex items-center justify-between gap-3">
+            <Badge variant={canPlay ? "default" : "secondary"}>
+              {selectedPlayers.length} selected
+            </Badge>
+            <div className="flex gap-2 ml-auto">
               <Button variant="outline" size="sm" onClick={selectAll}>
                 All
               </Button>
@@ -236,6 +205,22 @@ export default function NewSessionPage() {
             </div>
           </div>
 
+          {/* Search */}
+          {!loadingPlayers && allPlayers.length > 0 && (
+            <div className="relative">
+              <Search
+                size={15}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+              />
+              <Input
+                placeholder="Search players…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          )}
+
           {loadingPlayers && (
             <div className="text-center py-12 text-muted-foreground">
               Loading players…
@@ -243,11 +228,11 @@ export default function NewSessionPage() {
           )}
 
           {!loadingPlayers && allPlayers.length === 0 && (
-            <div className="text-center py-12 border-2 border-dashed rounded-xl">
+            <div className="text-center py-12 border-2 border-dashed border-zinc-800 rounded-xl">
               <p className="text-muted-foreground">No players in roster.</p>
               <Button
                 variant="link"
-                className="text-green-700 mt-1"
+                className="text-primary mt-1"
                 onClick={() => router.push("/players")}
               >
                 Add players first →
@@ -255,15 +240,21 @@ export default function NewSessionPage() {
             </div>
           )}
 
-          {!loadingPlayers && allPlayers.length > 0 && (
+          {!loadingPlayers && allPlayers.length > 0 && filteredPlayers.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              No players match "{search}"
+            </div>
+          )}
+
+          {!loadingPlayers && filteredPlayers.length > 0 && (
             <div className="grid sm:grid-cols-2 gap-2">
-              {allPlayers.map((player) => (
+              {filteredPlayers.map((player) => (
                 <label
                   key={player.id}
                   className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                     selectedIds.has(player.id)
-                      ? "border-green-500 bg-green-50"
-                      : "border-border bg-card hover:bg-muted/50"
+                      ? "border-primary/50 bg-primary/10 text-white"
+                      : "border-zinc-800 bg-card hover:border-zinc-700 hover:bg-zinc-800/50"
                   }`}
                 >
                   <Checkbox
@@ -271,7 +262,13 @@ export default function NewSessionPage() {
                     onCheckedChange={() => togglePlayer(player.id)}
                   />
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-green-100 text-green-800 font-bold flex items-center justify-center text-xs">
+                    <div
+                      className={`w-7 h-7 rounded-full font-bold flex items-center justify-center text-xs ${
+                        selectedIds.has(player.id)
+                          ? "bg-primary/20 text-primary"
+                          : "bg-zinc-800 text-zinc-400"
+                      }`}
+                    >
                       {player.name.charAt(0).toUpperCase()}
                     </div>
                     <span className="font-medium text-sm">{player.name}</span>
@@ -282,11 +279,7 @@ export default function NewSessionPage() {
           )}
 
           <div className="flex justify-end pt-4">
-            <Button
-              onClick={goToConfig}
-              disabled={!canPlay}
-              className="bg-green-700 hover:bg-green-800"
-            >
+            <Button onClick={goToConfig} disabled={!canPlay}>
               Next: Configure
               <ChevronRight size={16} className="ml-1" />
             </Button>
@@ -294,19 +287,18 @@ export default function NewSessionPage() {
         </div>
       )}
 
-      {/* ── STEP 2: Configure ─────────────────────────────────────────────────── */}
+      {/* ── STEP 2: Configure ──────────────────────────────────────────────────── */}
       {step === "config" && (
         <div className="space-y-6">
-          <div className="bg-card border rounded-xl p-5 space-y-5">
+          <div className="bg-card border border-zinc-800 rounded-xl p-5 space-y-5">
             {/* Courts */}
             <div className="flex items-center justify-between gap-4">
               <div>
-                <Label className="font-medium">Courts Available</Label>
+                <Label className="font-medium text-white">Courts Available</Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Needs {numCourts * 4} players — you have{" "}
-                  {selectedPlayers.length}
+                  Needs {numCourts * 4} players — you have {selectedPlayers.length}
                   {selectedPlayers.length > numCourts * 4 && (
-                    <span className="text-amber-600 ml-1">
+                    <span className="text-amber-400 ml-1">
                       ({selectedPlayers.length - numCourts * 4} resting/game)
                     </span>
                   )}
@@ -315,10 +307,9 @@ export default function NewSessionPage() {
               <Input
                 type="number"
                 min={1}
-                max={8}
                 value={numCourts}
                 onChange={(e) =>
-                  setNumCourts(Math.max(1, Math.min(8, Number(e.target.value))))
+                  setNumCourts(Math.max(1, parseInt(e.target.value) || 1))
                 }
                 className="w-20 text-center"
               />
@@ -329,7 +320,7 @@ export default function NewSessionPage() {
             {/* Games */}
             <div className="flex items-center justify-between gap-4">
               <div>
-                <Label className="font-medium">Number of Games</Label>
+                <Label className="font-medium text-white">Number of Games</Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Total rounds to schedule
                 </p>
@@ -337,10 +328,9 @@ export default function NewSessionPage() {
               <Input
                 type="number"
                 min={1}
-                max={30}
                 value={numGames}
                 onChange={(e) =>
-                  setNumGames(Math.max(1, Math.min(30, Number(e.target.value))))
+                  setNumGames(Math.max(1, parseInt(e.target.value) || 1))
                 }
                 className="w-20 text-center"
               />
@@ -351,7 +341,7 @@ export default function NewSessionPage() {
             {/* Fixed partnerships */}
             <div className="flex items-center justify-between gap-4">
               <div>
-                <Label className="font-medium">Fixed Partnerships</Label>
+                <Label className="font-medium text-white">Fixed Partnerships</Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {fixedPartnerships
                     ? "Pairs stay together — only opponents rotate."
@@ -366,28 +356,25 @@ export default function NewSessionPage() {
           </div>
 
           {/* Summary */}
-          <div className="rounded-lg bg-green-50 border border-green-200 p-4 text-sm text-green-800 space-y-1">
-            <p>
-              <strong>{selectedPlayers.length}</strong> players ·{" "}
-              <strong>{numCourts}</strong> court{numCourts !== 1 ? "s" : ""} ·{" "}
-              <strong>{numGames}</strong> game{numGames !== 1 ? "s" : ""}
+          <div className="rounded-lg bg-primary/10 border border-primary/20 px-4 py-3 text-sm space-y-1">
+            <p className="text-white">
+              <span className="font-semibold text-primary">{selectedPlayers.length}</span> players ·{" "}
+              <span className="font-semibold text-primary">{numCourts}</span> court{numCourts !== 1 ? "s" : ""} ·{" "}
+              <span className="font-semibold text-primary">{numGames}</span> game{numGames !== 1 ? "s" : ""}
             </p>
-            <p>
+            <p className="text-muted-foreground">
               {selectedPlayers.length >= playersNeeded ? (
                 <>
                   All courts full each game
                   {selectedPlayers.length > playersNeeded && (
-                    <>
-                      {" "}·{" "}
-                      <span className="font-medium">
-                        {selectedPlayers.length - playersNeeded} rotating out
-                      </span>
-                    </>
+                    <span className="text-amber-400 ml-1">
+                      · {selectedPlayers.length - playersNeeded} rotating out
+                    </span>
                   )}
                 </>
               ) : (
-                <span className="text-amber-700">
-                  ⚠ Only {Math.floor(selectedPlayers.length / 4)} court
+                <span className="text-amber-400">
+                  Only {Math.floor(selectedPlayers.length / 4)} court
                   {Math.floor(selectedPlayers.length / 4) !== 1 ? "s" : ""} can
                   be filled with {selectedPlayers.length} players.
                 </span>
@@ -402,19 +389,12 @@ export default function NewSessionPage() {
             </Button>
 
             {fixedPartnerships ? (
-              <Button
-                onClick={goToPairs}
-                className="bg-green-700 hover:bg-green-800"
-              >
+              <Button onClick={goToPairs}>
                 Next: Set Pairs
                 <ChevronRight size={16} className="ml-1" />
               </Button>
             ) : (
-              <Button
-                onClick={handleGenerate}
-                disabled={generating}
-                className="bg-green-700 hover:bg-green-800"
-              >
+              <Button onClick={handleGenerate} disabled={generating}>
                 <Zap size={16} className="mr-2" />
                 {generating ? "Generating…" : "Generate Schedule"}
               </Button>
@@ -423,22 +403,17 @@ export default function NewSessionPage() {
         </div>
       )}
 
-      {/* ── STEP 3: Pair Assignment (Fixed Partnerships) ──────────────────────── */}
+      {/* ── STEP 3: Pair Assignment ───────────────────────────────────────────── */}
       {step === "pairs" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-semibold">Assign Pairs</h2>
+              <h2 className="font-semibold text-white">Assign Pairs</h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                These partners stay together the whole session. Swap by
-                clicking a player name.
+                Partners stay together the whole session. Swap using the dropdowns.
               </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={reshufflePairs}
-            >
+            <Button variant="outline" size="sm" onClick={reshufflePairs}>
               <RefreshCw size={14} className="mr-1.5" />
               Re-shuffle
             </Button>
@@ -446,16 +421,13 @@ export default function NewSessionPage() {
 
           <div className="grid sm:grid-cols-2 gap-3">
             {pairs.map((pair, pi) => (
-              <div
-                key={pi}
-                className="border rounded-xl p-4 bg-card space-y-2"
-              >
-                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+              <div key={pi} className="border border-zinc-800 rounded-xl p-4 bg-card space-y-2">
+                <div className="text-xs font-semibold text-primary uppercase tracking-widest mb-2">
                   Pair {pi + 1}
                 </div>
                 {pair.map((playerId, slot) => (
                   <div key={slot} className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-green-100 text-green-800 font-bold flex items-center justify-center text-xs shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-primary/15 text-primary font-bold flex items-center justify-center text-xs shrink-0">
                       {playerName(playerId).charAt(0).toUpperCase()}
                     </div>
                     <select
@@ -463,7 +435,7 @@ export default function NewSessionPage() {
                       onChange={(e) =>
                         swapPairMember(pi, slot as 0 | 1, e.target.value)
                       }
-                      className="flex-1 text-sm border rounded-md px-2 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="flex-1 text-sm border border-zinc-700 rounded-md px-2 py-1.5 bg-zinc-900 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
                     >
                       {selectedPlayers.map((p) => (
                         <option key={p.id} value={p.id}>
@@ -477,12 +449,9 @@ export default function NewSessionPage() {
             ))}
           </div>
 
-          {/* Odd player warning */}
           {selectedPlayers.length % 2 !== 0 && (
-            <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2">
-              ⚠ You have an odd number of players (
-              {selectedPlayers.length}). The last player has been excluded from
-              pairing.
+            <div className="text-xs text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg px-4 py-2">
+              Odd number of players ({selectedPlayers.length}) — the last player is excluded from pairing.
             </div>
           )}
 
@@ -491,11 +460,7 @@ export default function NewSessionPage() {
               <ChevronLeft size={16} className="mr-1" />
               Back
             </Button>
-            <Button
-              onClick={handleGenerate}
-              disabled={generating}
-              className="bg-green-700 hover:bg-green-800"
-            >
+            <Button onClick={handleGenerate} disabled={generating}>
               <Zap size={16} className="mr-2" />
               {generating ? "Generating…" : "Generate Schedule"}
             </Button>

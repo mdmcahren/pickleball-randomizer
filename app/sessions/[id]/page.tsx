@@ -70,10 +70,10 @@ function buildGameRounds(
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 const COURT_COLORS = [
-  { bg: "bg-blue-50", border: "border-blue-200", badge: "bg-blue-100 text-blue-800", header: "bg-blue-100" },
-  { bg: "bg-purple-50", border: "border-purple-200", badge: "bg-purple-100 text-purple-800", header: "bg-purple-100" },
-  { bg: "bg-amber-50", border: "border-amber-200", badge: "bg-amber-100 text-amber-800", header: "bg-amber-100" },
-  { bg: "bg-pink-50", border: "border-pink-200", badge: "bg-pink-100 text-pink-800", header: "bg-pink-100" },
+  { accentBorder: "border-l-blue-500",   label: "text-blue-400",   avatar: "bg-blue-500/15 text-blue-300" },
+  { accentBorder: "border-l-violet-500", label: "text-violet-400", avatar: "bg-violet-500/15 text-violet-300" },
+  { accentBorder: "border-l-amber-500",  label: "text-amber-400",  avatar: "bg-amber-500/15 text-amber-300" },
+  { accentBorder: "border-l-rose-500",   label: "text-rose-400",   avatar: "bg-rose-500/15 text-rose-300" },
 ];
 
 function CourtCard({
@@ -85,12 +85,16 @@ function CourtCard({
 }) {
   const c = COURT_COLORS[(court.courtNumber - 1) % COURT_COLORS.length];
   return (
-    <div className={`rounded-xl border ${c.border} ${c.bg} overflow-hidden`}>
-      <div className={`${c.header} px-4 py-2 flex items-center justify-between`}>
-        <span className="font-bold text-sm">Court {court.courtNumber}</span>
+    <div
+      className={`rounded-xl border border-zinc-700 border-l-4 ${c.accentBorder} bg-card overflow-hidden`}
+    >
+      <div className="px-4 py-2 flex items-center justify-between border-b border-zinc-800">
+        <span className={`font-bold text-sm ${c.label}`}>
+          Court {court.courtNumber}
+        </span>
         <span className="text-xs text-muted-foreground">vs</span>
       </div>
-      <div className="divide-y divide-dashed divide-border">
+      <div className="divide-y divide-dashed divide-zinc-800">
         {[
           { label: "Team A", players: court.teamA },
           { label: "Team B", players: court.teamB },
@@ -103,11 +107,13 @@ function CourtCard({
               {players.map((id) => (
                 <div key={id} className="flex items-center gap-2">
                   <div
-                    className={`w-6 h-6 rounded-full font-bold flex items-center justify-center text-xs ${c.badge}`}
+                    className={`w-6 h-6 rounded-full font-bold flex items-center justify-center text-xs ${c.avatar}`}
                   >
                     {getName(id).charAt(0).toUpperCase()}
                   </div>
-                  <span className="text-sm font-medium">{getName(id)}</span>
+                  <span className="text-sm font-medium text-white">
+                    {getName(id)}
+                  </span>
                 </div>
               ))}
             </div>
@@ -130,32 +136,39 @@ function GameCard({
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="border rounded-xl bg-card shadow-sm overflow-hidden">
+    <div className="border border-zinc-800 rounded-xl bg-card overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-5 py-4 hover:bg-muted/30 transition-colors"
+        className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/[0.03] transition-colors"
       >
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-green-100 text-green-800 font-bold flex items-center justify-center text-sm">
+          <div className="w-8 h-8 rounded-full bg-primary/15 text-primary font-bold flex items-center justify-center text-sm border border-primary/25">
             {round.gameNumber}
           </div>
-          <span className="font-semibold">Game {round.gameNumber}</span>
+          <span className="font-semibold text-white">Game {round.gameNumber}</span>
           <Badge variant="secondary" className="text-xs">
             {round.courts.length} court{round.courts.length !== 1 ? "s" : ""}
           </Badge>
           {round.restingPlayerIds.length > 0 && (
-            <Badge variant="outline" className="text-xs text-amber-700 border-amber-300">
+            <Badge
+              variant="outline"
+              className="text-xs text-amber-400 border-amber-500/30"
+            >
               <Coffee size={10} className="mr-1" />
               {round.restingPlayerIds.length} resting
             </Badge>
           )}
         </div>
-        {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        {open ? (
+          <ChevronUp size={16} className="text-muted-foreground" />
+        ) : (
+          <ChevronDown size={16} className="text-muted-foreground" />
+        )}
       </button>
 
       {open && (
         <div className="px-5 pb-5">
-          <Separator className="mb-4" />
+          <Separator className="mb-4 bg-zinc-800" />
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {round.courts.map((court) => (
               <CourtCard key={court.courtNumber} court={court} getName={getName} />
@@ -164,12 +177,12 @@ function GameCard({
 
           {round.restingPlayerIds.length > 0 && (
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <Coffee size={14} className="text-amber-600" />
+              <Coffee size={14} className="text-amber-400" />
               <span className="text-xs font-medium text-muted-foreground">
                 Resting:
               </span>
               {round.restingPlayerIds.map((id) => (
-                <Badge key={id} variant="outline" className="text-xs">
+                <Badge key={id} variant="outline" className="text-xs text-amber-400 border-amber-500/30">
                   {getName(id)}
                 </Badge>
               ))}
@@ -258,7 +271,7 @@ export default function SessionPage({
             <ArrowLeft size={14} className="mr-1" />
             All Sessions
           </Link>
-          <h1 className="text-2xl font-bold">{sessionDate}</h1>
+          <h1 className="text-2xl font-bold text-white">{sessionDate}</h1>
           <div className="flex flex-wrap items-center gap-2 mt-2">
             <Badge variant="secondary">
               {session.total_games} game{session.total_games !== 1 ? "s" : ""}
@@ -270,12 +283,12 @@ export default function SessionPage({
               {sessionPlayerIds.length} players
             </Badge>
             {session.fixed_partnerships ? (
-              <Badge className="bg-purple-100 text-purple-800 border-purple-200">
+              <Badge className="bg-violet-500/20 text-violet-300 border border-violet-500/30">
                 <ShieldCheck size={11} className="mr-1" />
                 Fixed Pairs
               </Badge>
             ) : (
-              <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+              <Badge className="bg-primary/15 text-primary border border-primary/30">
                 <Shuffle size={11} className="mr-1" />
                 Randomised
               </Badge>
@@ -293,8 +306,8 @@ export default function SessionPage({
 
       {/* Fixed partnerships pair legend */}
       {session.fixed_partnerships && session.pairs && (
-        <div className="mb-6 rounded-xl border bg-purple-50 border-purple-200 p-4">
-          <div className="font-semibold text-purple-800 text-sm mb-3 flex items-center gap-1.5">
+        <div className="mb-6 rounded-xl border border-violet-500/30 bg-violet-500/10 p-4">
+          <div className="font-semibold text-violet-300 text-sm mb-3 flex items-center gap-1.5">
             <ShieldCheck size={14} />
             Fixed Pairs This Session
           </div>
@@ -302,7 +315,7 @@ export default function SessionPage({
             {(session.pairs as [string, string][]).map((pair, i) => (
               <div
                 key={i}
-                className="bg-white border border-purple-200 rounded-full px-3 py-1 text-xs font-medium text-purple-900 flex items-center gap-1"
+                className="bg-zinc-900 border border-violet-500/30 rounded-full px-3 py-1 text-xs font-medium text-violet-200 flex items-center gap-1"
               >
                 {getName(pair[0])} & {getName(pair[1])}
               </div>
@@ -344,52 +357,52 @@ export default function SessionPage({
 
         {/* Stats tab */}
         <TabsContent value="stats">
-          <div className="rounded-xl border overflow-hidden">
+          <div className="rounded-xl border border-zinc-800 overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-muted/50">
+              <thead className="bg-zinc-900">
                 <tr>
-                  <th className="text-left px-4 py-3 font-semibold">Player</th>
-                  <th className="text-center px-4 py-3 font-semibold">Played</th>
-                  <th className="text-center px-4 py-3 font-semibold">Rested</th>
-                  <th className="text-center px-4 py-3 font-semibold">
+                  <th className="text-left px-4 py-3 font-semibold text-white">Player</th>
+                  <th className="text-center px-4 py-3 font-semibold text-white">Played</th>
+                  <th className="text-center px-4 py-3 font-semibold text-white">Rested</th>
+                  <th className="text-center px-4 py-3 font-semibold text-white">
                     Unique Partners
                   </th>
-                  <th className="text-center px-4 py-3 font-semibold">
+                  <th className="text-center px-4 py-3 font-semibold text-white">
                     Unique Opponents
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-zinc-800">
                 {sessionPlayerIds.map((id) => {
                   const s = stats.get(id);
                   if (!s) return null;
                   return (
-                    <tr key={id} className="hover:bg-muted/20 transition-colors">
+                    <tr key={id} className="hover:bg-white/[0.03] transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-green-100 text-green-800 font-bold flex items-center justify-center text-xs">
+                          <div className="w-7 h-7 rounded-full bg-primary/15 text-primary font-bold flex items-center justify-center text-xs border border-primary/25">
                             {getName(id).charAt(0).toUpperCase()}
                           </div>
-                          <span className="font-medium">{getName(id)}</span>
+                          <span className="font-medium text-white">{getName(id)}</span>
                         </div>
                       </td>
-                      <td className="text-center px-4 py-3 tabular-nums">
+                      <td className="text-center px-4 py-3 tabular-nums text-white">
                         {s.gamesPlayed}
                       </td>
                       <td className="text-center px-4 py-3 tabular-nums">
                         {s.gamesRested > 0 ? (
-                          <span className="text-amber-600">{s.gamesRested}</span>
+                          <span className="text-amber-400">{s.gamesRested}</span>
                         ) : (
                           <span className="text-muted-foreground">0</span>
                         )}
                       </td>
                       <td className="text-center px-4 py-3 tabular-nums">
-                        <span className="font-medium text-blue-700">
+                        <span className="font-medium text-blue-400">
                           {s.uniquePartners.size}
                         </span>
                       </td>
                       <td className="text-center px-4 py-3 tabular-nums">
-                        <span className="font-medium text-purple-700">
+                        <span className="font-medium text-violet-400">
                           {s.uniqueOpponents.size}
                         </span>
                       </td>

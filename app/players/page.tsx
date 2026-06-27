@@ -51,10 +51,12 @@ export default function PlayersPage() {
     setAdding(true);
     try {
       const player = await addPlayer(name);
-      setPlayers((prev) => [...prev, player].sort((a, b) => a.name.localeCompare(b.name)));
+      setPlayers((prev) =>
+        [...prev, player].sort((a, b) => a.name.localeCompare(b.name))
+      );
       setNewName("");
       setDialogOpen(false);
-      toast.success(`${name} added to roster!`);
+      toast.success(`${name} added to roster.`);
     } catch (err) {
       toast.error("Failed to add player.");
       console.error(err);
@@ -82,24 +84,20 @@ export default function PlayersPage() {
     <div className="max-w-3xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Users className="text-green-700" size={24} />
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <Users size={22} className="text-primary" />
             Player Roster
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
             Add and manage players across all sessions.
           </p>
         </div>
-        <Button
-          onClick={() => setDialogOpen(true)}
-          className="bg-green-700 hover:bg-green-800"
-        >
+        <Button onClick={() => setDialogOpen(true)}>
           <UserPlus size={16} className="mr-2" />
           Add Player
         </Button>
       </div>
 
-      {/* Player count badge */}
       {!loading && (
         <div className="mb-4">
           <Badge variant="secondary">
@@ -108,17 +106,14 @@ export default function PlayersPage() {
         </div>
       )}
 
-      {/* Loading state */}
       {loading && (
         <div className="text-center py-16 text-muted-foreground">
           Loading roster…
         </div>
       )}
 
-      {/* Empty state */}
       {!loading && players.length === 0 && (
-        <div className="text-center py-16 border-2 border-dashed rounded-xl">
-          <div className="text-4xl mb-3">👤</div>
+        <div className="text-center py-16 border-2 border-dashed border-zinc-800 rounded-xl">
           <p className="font-medium text-muted-foreground">No players yet.</p>
           <p className="text-sm text-muted-foreground mt-1">
             Click "Add Player" to build your roster.
@@ -126,35 +121,33 @@ export default function PlayersPage() {
         </div>
       )}
 
-      {/* Player grid */}
       {!loading && players.length > 0 && (
         <div className="grid sm:grid-cols-2 gap-3">
           {players.map((player) => (
             <div
               key={player.id}
-              className="flex items-center justify-between bg-card border rounded-lg px-4 py-3 shadow-sm"
+              className="flex items-center justify-between bg-card border border-zinc-800 rounded-lg px-4 py-3"
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-green-100 text-green-800 font-bold flex items-center justify-center text-sm">
+                <div className="w-9 h-9 rounded-full bg-primary/15 text-primary font-bold flex items-center justify-center text-sm border border-primary/30">
                   {player.name.charAt(0).toUpperCase()}
                 </div>
-                <span className="font-medium">{player.name}</span>
+                <span className="font-medium text-white">{player.name}</span>
               </div>
               <Button
                 variant="ghost"
-                size="icon"
+                size="icon-sm"
                 disabled={deletingId === player.id}
                 onClick={() => handleDelete(player)}
                 className="text-muted-foreground hover:text-destructive"
               >
-                <Trash2 size={15} />
+                <Trash2 size={14} />
               </Button>
             </div>
           ))}
         </div>
       )}
 
-      {/* Add player dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -177,11 +170,7 @@ export default function PlayersPage() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>
-            <Button
-              onClick={handleAdd}
-              disabled={adding || !newName.trim()}
-              className="bg-green-700 hover:bg-green-800"
-            >
+            <Button onClick={handleAdd} disabled={adding || !newName.trim()}>
               {adding ? "Adding…" : "Add Player"}
             </Button>
           </DialogFooter>

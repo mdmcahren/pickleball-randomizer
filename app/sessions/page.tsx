@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { CalendarDays, ChevronRight, PlusCircle } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { getSessions } from "@/lib/supabase";
@@ -25,8 +25,8 @@ export default function SessionsPage() {
     <div className="max-w-3xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <CalendarDays className="text-green-700" size={24} />
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <CalendarDays size={22} className="text-primary" />
             Session History
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -35,7 +35,7 @@ export default function SessionsPage() {
         </div>
         <Link
           href="/sessions/new"
-          className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}
+          className={cn(buttonVariants())}
         >
           <PlusCircle size={16} className="mr-2" />
           New Session
@@ -49,12 +49,11 @@ export default function SessionsPage() {
       )}
 
       {!loading && sessions.length === 0 && (
-        <div className="text-center py-16 border-2 border-dashed rounded-xl">
-          <div className="text-4xl mb-3">📋</div>
+        <div className="text-center py-16 border-2 border-dashed border-zinc-800 rounded-xl">
           <p className="font-medium text-muted-foreground">No sessions yet.</p>
           <Link
             href="/sessions/new"
-            className={cn(buttonVariants({ variant: "link" }), "text-green-700 mt-1")}
+            className={cn(buttonVariants({ variant: "link" }), "text-primary mt-1")}
           >
             Create your first session →
           </Link>
@@ -67,11 +66,11 @@ export default function SessionsPage() {
             <Link
               key={s.id}
               href={`/sessions/${s.id}`}
-              className="flex items-center justify-between bg-card border rounded-xl px-5 py-4 shadow-sm hover:border-green-400 hover:bg-green-50/30 transition-colors group"
+              className="flex items-center justify-between bg-card border border-zinc-800 rounded-xl px-5 py-4 hover:border-primary/40 hover:bg-primary/5 transition-colors group"
             >
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold">
+                  <span className="font-semibold text-white">
                     {new Date(s.created_at).toLocaleDateString("en-US", {
                       weekday: "short",
                       month: "short",
@@ -93,7 +92,7 @@ export default function SessionsPage() {
               </div>
               <ChevronRight
                 size={18}
-                className="text-muted-foreground group-hover:text-green-700 transition-colors"
+                className="text-zinc-600 group-hover:text-primary transition-colors"
               />
             </Link>
           ))}
