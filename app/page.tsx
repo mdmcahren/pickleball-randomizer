@@ -9,7 +9,7 @@ export default function Home() {
         <span className="text-primary font-black text-xl tracking-tighter">PB</span>
       </div>
       <h1 className="text-4xl font-bold tracking-tight text-white">
-        Pickleball Matchmaker
+        Round Robin
       </h1>
       <p className="text-lg text-muted-foreground max-w-md">
         Intelligently balance teams and opponents across every game so everyone

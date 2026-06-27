@@ -21,10 +21,10 @@ export function Nav() {
             <span className="text-primary-foreground font-black text-xs tracking-tighter">PB</span>
           </div>
           <span className="font-bold text-lg tracking-tight text-white hidden sm:block">
-            Pickleball Matchmaker
+            Round Robin
           </span>
           <span className="font-bold text-lg tracking-tight text-white sm:hidden">
-            PB Match
+            Round Robin
           </span>
         </Link>
 

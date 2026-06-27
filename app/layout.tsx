@@ -7,8 +7,8 @@ import { Toaster } from "@/components/ui/sonner";
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
 
 export const metadata: Metadata = {
-  title: "Pickleball Matchmaker",
-  description: "Smart team matchmaking for pickleball sessions",
+  title: "Round Robin",
+  description: "Smart team matchmaking for round robin sessions",
 };
 
 export default function RootLayout({
