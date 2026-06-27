@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Trash2, UserPlus, Users } from "lucide-react";
+import { Check, Pencil, Trash2, UserPlus, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { getPlayers, addPlayer, deletePlayer } from "@/lib/supabase";
+import { getPlayers, addPlayer, deletePlayer, updatePlayerName, archivePlayer } from "@/lib/supabase";
 import type { Player } from "@/lib/types";
 
 export default function PlayersPage() {
@@ -23,7 +23,14 @@ export default function PlayersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [adding, setAdding] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Rename state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  // Archive/delete state
+  const [archivingId, setArchivingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadPlayers();
@@ -34,7 +41,7 @@ export default function PlayersPage() {
       const data = await getPlayers();
       setPlayers(data);
     } catch (err) {
-      toast.error("Failed to load players. Check your Supabase env vars.");
+      toast.error("Failed to load players.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -65,18 +72,58 @@ export default function PlayersPage() {
     }
   }
 
-  async function handleDelete(player: Player) {
-    if (!confirm(`Remove ${player.name} from the roster?`)) return;
-    setDeletingId(player.id);
+  function startEdit(player: Player) {
+    setEditingId(player.id);
+    setEditingName(player.name);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditingName("");
+  }
+
+  async function handleRename(player: Player) {
+    const name = editingName.trim();
+    if (!name || name === player.name) { cancelEdit(); return; }
+    if (players.some((p) => p.id !== player.id && p.name.toLowerCase() === name.toLowerCase())) {
+      toast.error(`"${name}" is already on the roster.`);
+      return;
+    }
+    setSavingId(player.id);
     try {
-      await deletePlayer(player.id);
-      setPlayers((prev) => prev.filter((p) => p.id !== player.id));
-      toast.success(`${player.name} removed.`);
+      await updatePlayerName(player.id, name);
+      setPlayers((prev) =>
+        prev
+          .map((p) => (p.id === player.id ? { ...p, name } : p))
+          .sort((a, b) => a.name.localeCompare(b.name))
+      );
+      toast.success(`Renamed to ${name}.`);
+      setEditingId(null);
     } catch (err) {
-      toast.error("Failed to delete player.");
+      toast.error("Failed to rename player.");
       console.error(err);
     } finally {
-      setDeletingId(null);
+      setSavingId(null);
+    }
+  }
+
+  async function handleArchive(player: Player) {
+    if (!confirm(`Hide "${player.name}" from the roster? Their match history is preserved.`)) return;
+    setArchivingId(player.id);
+    try {
+      await archivePlayer(player.id);
+      setPlayers((prev) => prev.filter((p) => p.id !== player.id));
+      toast.success(`${player.name} hidden from roster.`);
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code;
+      if (code === "23503") {
+        toast.error(`${player.name} can't be deleted — they appear in past session records.`);
+      } else {
+        toast.error("Failed to remove player.");
+      }
+      console.error(err);
+    } finally {
+      setArchivingId(null);
     }
   }
 
@@ -89,7 +136,7 @@ export default function PlayersPage() {
             Player Roster
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Add and manage players across all sessions.
+            Add, rename, or remove players. Hidden players keep their match history.
           </p>
         </div>
         <Button onClick={() => setDialogOpen(true)}>
@@ -107,9 +154,7 @@ export default function PlayersPage() {
       )}
 
       {loading && (
-        <div className="text-center py-16 text-muted-foreground">
-          Loading roster…
-        </div>
+        <div className="text-center py-16 text-muted-foreground">Loading roster…</div>
       )}
 
       {!loading && players.length === 0 && (
@@ -126,23 +171,70 @@ export default function PlayersPage() {
           {players.map((player) => (
             <div
               key={player.id}
-              className="flex items-center justify-between bg-card border border-zinc-800 rounded-lg px-4 py-3"
+              className="flex items-center justify-between bg-card border border-zinc-800 rounded-lg px-4 py-3 gap-2"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-primary/15 text-primary font-bold flex items-center justify-center text-sm border border-primary/30">
-                  {player.name.charAt(0).toUpperCase()}
+              {editingId === player.id ? (
+                /* ── Rename mode ── */
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <Input
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleRename(player);
+                      if (e.key === "Escape") cancelEdit();
+                    }}
+                    className="h-8 text-sm"
+                    autoFocus
+                  />
+                  <Button
+                    size="icon-sm"
+                    disabled={savingId === player.id}
+                    onClick={() => handleRename(player)}
+                    className="shrink-0"
+                  >
+                    <Check size={13} />
+                  </Button>
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    onClick={cancelEdit}
+                    className="shrink-0 text-muted-foreground"
+                  >
+                    <X size={13} />
+                  </Button>
                 </div>
-                <span className="font-medium text-white">{player.name}</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                disabled={deletingId === player.id}
-                onClick={() => handleDelete(player)}
-                className="text-muted-foreground hover:text-destructive"
-              >
-                <Trash2 size={14} />
-              </Button>
+              ) : (
+                /* ── Display mode ── */
+                <>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-full bg-primary/15 text-primary font-bold flex items-center justify-center text-sm border border-primary/30 shrink-0">
+                      {player.name.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="font-medium text-white truncate">{player.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => startEdit(player)}
+                      className="text-muted-foreground hover:text-white"
+                      title="Rename"
+                    >
+                      <Pencil size={13} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      disabled={archivingId === player.id}
+                      onClick={() => handleArchive(player)}
+                      className="text-muted-foreground hover:text-destructive"
+                      title="Hide from roster"
+                    >
+                      <Trash2 size={13} />
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </div>
@@ -154,9 +246,7 @@ export default function PlayersPage() {
             <DialogTitle>Add Player</DialogTitle>
           </DialogHeader>
           <div className="py-2">
-            <Label htmlFor="player-name" className="mb-2 block">
-              Name
-            </Label>
+            <Label htmlFor="player-name" className="mb-2 block">Name</Label>
             <Input
               id="player-name"
               placeholder="e.g. Alice"
@@ -167,9 +257,7 @@ export default function PlayersPage() {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleAdd} disabled={adding || !newName.trim()}>
               {adding ? "Adding…" : "Add Player"}
             </Button>

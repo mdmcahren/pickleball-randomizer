@@ -24,6 +24,7 @@ export async function getPlayers(): Promise<Player[]> {
   const { data, error } = await db()
     .from("players")
     .select("*")
+    .eq("active", true)
     .order("name");
   if (error) throw error;
   return data ?? [];
@@ -41,6 +42,17 @@ export async function addPlayer(name: string): Promise<Player> {
 
 export async function deletePlayer(id: string): Promise<void> {
   const { error } = await db().from("players").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function updatePlayerName(id: string, name: string): Promise<void> {
+  const { error } = await db().from("players").update({ name: name.trim() }).eq("id", id);
+  if (error) throw error;
+}
+
+export async function archivePlayer(id: string): Promise<void> {
+  // Try soft-delete first; fall back to hard-delete if no active column exists
+  const { error } = await db().from("players").update({ active: false }).eq("id", id);
   if (error) throw error;
 }
 
